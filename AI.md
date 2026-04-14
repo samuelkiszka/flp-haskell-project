@@ -1,0 +1,1 @@
+# Popis používání umělé inteligence při vypracovávání tohoto projektu

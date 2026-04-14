@@ -153,5 +153,10 @@ filterSpecParser =
 --
 -- FLP: Implement this function (read the long comment above first).
 
--- buildFilterSpec :: ??? -> FilterSpec
--- buildFilterSpec ???
+buildFilterSpec :: [String] -> [String] -> [String] -> [String] -> [String] -> [String] -> FilterSpec
+buildFilterSpec inclAny exclAny inclCat inclTag exclCat exclTag =
+  FilterSpec {
+    fsIncludes = map ByAny inclAny ++ map ByCategory inclCat ++ map ByTag inclTag,
+    fsExcludes = map ByAny exclAny ++ map ByCategory exclCat ++ map ByTag exclTag,
+    fsUseRegex = False
+  }
