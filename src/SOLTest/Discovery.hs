@@ -4,9 +4,10 @@ module SOLTest.Discovery (discoverTests) where
 import SOLTest.Types
 import System.Directory
   ( doesFileExist,
+    doesDirectoryExist,
     listDirectory,
   )
-import System.FilePath (replaceExtension, takeBaseName, (</>))
+import System.FilePath (replaceExtension, takeBaseName, takeExtension, (</>))
 
 -- | Discover all @.test@ files in a directory.
 --
@@ -21,8 +22,30 @@ discoverTests :: Bool -> FilePath -> IO [TestCaseFile]
 discoverTests recursive dir = do
   entries <- listDirectory dir
   let fullPaths = map (dir </>) entries
-  -- ???
-  return [] -- replace [] with your list of discovered TestCaseFile
+  -- apply @processFile@ to each path in @fullPaths@ together with @recursive@
+  let lists = mapM (processFile . (, recursive)) fullPaths
+  -- flatten @IO [[TestCaseFile]]@ into @IO [TestCaseFile]@
+  concat <$> lists
+
+
+-- | Process a file path, returning zero or more 'TestCaseFile's.
+--
+-- If the path is a directory and @recursive@ is 'True', recursively
+-- runs 'discoverTests' on that directory. If the path is a @.test@
+-- file, builds a 'TestCaseFile' using 'findCompanionFiles'.
+-- Otherwise returns an empty list.
+processFile :: (FilePath, Bool) -> IO [TestCaseFile]
+processFile (path, recursive) = do
+  isDir <- doesDirectoryExist path
+  let isTest = takeExtension path == ".test"
+  if isDir && recursive
+    then discoverTests True path
+  else
+    if isTest then do
+      scf <- findCompanionFiles path
+      return [scf]
+    else return []
+
 
 -- | Build a 'TestCaseFile' for a given @.test@ file path, checking for
 -- companion @.in@ and @.out@ files in the same directory.
