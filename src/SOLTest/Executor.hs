@@ -102,8 +102,34 @@ executeExecuteOnly interpPath test =
 -- FLP: Implement this function. You'll use @withTempSource@ here.
 executeCombined :: FilePath -> FilePath -> TestCaseDefinition -> IO TestCaseReport
 executeCombined parserPath interpPath test = do
-  -- ?
-  return undefined
+  parsRes <- executeParseOnly parserPath test
+  -- based on parser result, interpreter is either run or not
+  case tcrParserExitCode parsRes of 
+    Just 0 -> 
+      withTempSource (fromMaybe "" (tcrParserStdout parsRes)) $ \tmpPath -> do -- TODO zkontrolovat, zda fromMaybe může být tady
+        (exitCode, iOut, iErr) <- runInterpreter interpPath tmpPath (tcdStdinFile test)
+        let code = exitCodeToInt exitCode
+            expectedCodes = fromMaybe [] (tcdExpectedInterpreterExitCodes test)
+        (result, diffOut) <- checkInterpreterResult code expectedCodes iOut (tcdExpectedStdoutFile test)
+        return (mkReport parsRes result (Just code) (Just iOut) (Just iErr) diffOut)
+    _ -> 
+      return (mkReport parsRes (tcrResult parsRes) Nothing Nothing Nothing Nothing)
+
+  where
+    -- | Helper function, that builds @TestCaseReport@ based on results of parser and interpret execution
+    mkReport :: TestCaseReport -> TestResult -> Maybe Int -> Maybe String -> Maybe String -> Maybe String -> TestCaseReport
+    mkReport parsRes result iExit iOut iErr diff = 
+      TestCaseReport 
+        { tcrResult = result,
+          tcrParserExitCode = tcrParserExitCode parsRes,
+          tcrInterpreterExitCode = iExit,
+          tcrParserStdout = tcrParserStdout parsRes,
+          tcrParserStderr = tcrParserStderr parsRes,
+          tcrInterpreterStdout = iOut,
+          tcrInterpreterStderr = iErr,
+          tcrDiffOutput = diff
+        }
+
 
 -- ---------------------------------------------------------------------------
 -- Process wrappers
