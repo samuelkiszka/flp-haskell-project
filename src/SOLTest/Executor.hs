@@ -18,7 +18,7 @@ where
 import Control.Exception (IOException, try)
 import Data.Maybe (fromMaybe)
 import SOLTest.Types
-import System.Directory (doesFileExist)
+import System.Directory (doesFileExist, getPermissions, executable)
 import System.Exit (ExitCode (..))
 import System.IO (hClose, hPutStr)
 import System.IO.Temp (withSystemTempFile)
@@ -221,7 +221,14 @@ withTempSource content action =
 --
 -- FLP: Implement this function. It will start similarly to @withTempSource@.
 runDiffOnOutput :: String -> FilePath -> IO (TestResult, Maybe String)
-runDiffOnOutput iOut outFile = undefined
+runDiffOnOutput iOut outFile = 
+  withTempSource iOut $ \tmpFile -> do
+    -- run the diff on tmpFile and outFile
+    (diffCode, diffOut) <- runDiff tmpFile outFile
+    case diffCode of
+      ExitSuccess -> return (Passed, Nothing)
+      -- iOut and outFile differs
+      _ -> return (DiffFail, Just diffOut)
 
 -- | Ensure an executable path is provided and the file is executable,
 -- then run an action with it.  Returns 'Left' 'CannotExecute' if the
@@ -254,10 +261,19 @@ checkExecutable :: FilePath -> IO (Maybe UnexecutedReason)
 checkExecutable path = do
   result <- try (doesFileExist path) :: IO (Either IOException Bool)
   case result of
-    Left err -> return (Just (UnexecutedReason CannotExecute (Just (show err))))
-    Right False -> undefined -- ???
-    Right True -> undefined -- ???
-  return Nothing -- this probably won't be here
+    Left err ->
+      return (Just (UnexecutedReason { urCode = CannotExecute, urMessage = Just (show err) }))
+    Right False ->
+      -- return exception with the reason file not exist
+      return (Just (UnexecutedReason { urCode = CannotExecute, urMessage = Just "Fiel does not exist." }))
+    Right True -> do
+      -- return permissions of a file
+      perms <- getPermissions path
+      -- determine, whether the file does have executable permissions
+      if executable perms then 
+        return Nothing
+      else
+        return (Just (UnexecutedReason { urCode = CannotExecute, urMessage = Just "Fiel is not executable." }))
 
 -- | Convert 'ExitCode' to an 'Int'.
 exitCodeToInt :: ExitCode -> Int
