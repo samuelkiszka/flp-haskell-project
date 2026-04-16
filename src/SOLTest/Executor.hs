@@ -104,22 +104,22 @@ executeCombined :: FilePath -> FilePath -> TestCaseDefinition -> IO TestCaseRepo
 executeCombined parserPath interpPath test = do
   parsRes <- executeParseOnly parserPath test
   -- based on parser result, interpreter is either run or not
-  case tcrParserExitCode parsRes of 
-    Just 0 -> 
+  case tcrParserExitCode parsRes of
+    Just 0 ->
       withTempSource (fromMaybe "" (tcrParserStdout parsRes)) $ \tmpPath -> do -- TODO zkontrolovat, zda fromMaybe může být tady
         (exitCode, iOut, iErr) <- runInterpreter interpPath tmpPath (tcdStdinFile test)
         let code = exitCodeToInt exitCode
             expectedCodes = fromMaybe [] (tcdExpectedInterpreterExitCodes test)
         (result, diffOut) <- checkInterpreterResult code expectedCodes iOut (tcdExpectedStdoutFile test)
         return (mkReport parsRes result (Just code) (Just iOut) (Just iErr) diffOut)
-    _ -> 
+    _ ->
       return (mkReport parsRes (tcrResult parsRes) Nothing Nothing Nothing Nothing)
 
   where
     -- | Helper function, that builds @TestCaseReport@ based on results of parser and interpret execution
     mkReport :: TestCaseReport -> TestResult -> Maybe Int -> Maybe String -> Maybe String -> Maybe String -> TestCaseReport
-    mkReport parsRes result iExit iOut iErr diff = 
-      TestCaseReport 
+    mkReport parsRes result iExit iOut iErr diff =
+      TestCaseReport
         { tcrResult = result,
           tcrParserExitCode = tcrParserExitCode parsRes,
           tcrInterpreterExitCode = iExit,
@@ -183,7 +183,29 @@ checkInterpreterResult ::
   -- | Path to the @.out@ file, if present.
   Maybe FilePath ->
   IO (TestResult, Maybe String)
-checkInterpreterResult actualCode expectedCodes iOut mOutFile = undefined
+checkInterpreterResult actualCode expectedCodes iOut mOutFile = do
+  case mOutFile of
+    -- continue, just if mOutFile exists, else do not care for diff at all
+    Just path -> do
+      let success = actualCode == 0
+      exists <- doesFileExist path
+      if success && exists then do
+        -- get output of the diff utility
+        (difRess, diffOut) <- runDiffOnOutput iOut path
+        return (difRess, diffOut)
+      else return (compareActualVsExpected actualCode expectedCodes)
+    Nothing ->
+      return (compareActualVsExpected actualCode expectedCodes)
+
+-- | Helper function for result building, so it is not repeated in the main function.
+-- Returns success if @actualCode@ occur in @expectedCodes@. Otherwise returns failure.
+compareActualVsExpected :: Int -> [Int] -> (TestResult, Maybe String)
+compareActualVsExpected actualCode expectedCodes =
+  if actualCode `elem` expectedCodes then
+    (Passed, Nothing)
+  else
+    (IntFail, Nothing)
+    
 
 -- | Write a string to a temporary file and pass its path to an action.
 -- The file is deleted when the action returns.
