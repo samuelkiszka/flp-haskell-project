@@ -14,6 +14,7 @@ where
 
 import Data.Map.Strict (Map)
 import Data.Map.Strict qualified as Map
+import Data.List (find)
 import SOLTest.Types
 
 -- ---------------------------------------------------------------------------
@@ -63,7 +64,37 @@ groupByCategory ::
   [TestCaseDefinition] ->
   Map String TestCaseReport ->
   Map String CategoryReport
-groupByCategory definitions results = undefined
+groupByCategory definitions =
+  -- Itrate througn all reports and generate per category map
+  Map.foldlWithKey' (categorizeOneResult definitions) Map.empty
+
+-- | Returns @acc@ updated with values of @report@.
+-- If @testName@ is not defined in @deffinitions@, whole @report@ will be ignored.
+categorizeOneResult :: [TestCaseDefinition] -> Map String CategoryReport -> String -> TestCaseReport -> Map String CategoryReport
+categorizeOneResult definitions acc testName report =
+  -- Find appropriate TestCaseDefinition, in case of failure, ignore given report
+  case find (\def -> tcdName def == testName) definitions of
+    Just def ->
+      let cat = tcdCategory def
+          points = tcdPoints def
+          passedPoints = case tcrResult report of
+            Passed -> points
+            _ -> 0
+          -- Create tmp CategoryReport containig data for given report for further use
+          rep = CategoryReport {crTotalPoints=points, crPassedPoints=passedPoints, crTestResults=Map.fromList [(testName, report)]}
+      in
+        -- Insert tmp CategoryReport to acumulator CategoryReport of given category
+        Map.insertWith joinCategoryReports cat rep acc
+    Nothing -> acc
+
+-- | Inserts values from CategoryRepor @result@ into @acc@
+joinCategoryReports :: CategoryReport -> CategoryReport -> CategoryReport
+joinCategoryReports result acc =
+  CategoryReport {
+    crTotalPoints = crTotalPoints result + crTotalPoints acc,
+    crPassedPoints = crPassedPoints result + crPassedPoints acc,
+    crTestResults = Map.union (crTestResults result) (crTestResults acc)
+  }
 
 -- ---------------------------------------------------------------------------
 -- Statistics
@@ -82,7 +113,26 @@ computeStats ::
   -- | Category reports (Nothing in dry-run mode).
   Maybe (Map String CategoryReport) ->
   TestStats
-computeStats foundCount loadedCount selectedCount mCategoryResults = undefined
+computeStats foundCount loadedCount selectedCount mCategoryResults =
+  let (results, count) = case mCategoryResults of
+        Just res ->
+          -- Sum of each category test count
+          let cnt = Map.foldlWithKey' countTestsPerCategory 0 res
+          in (res, cnt)
+        Nothing -> (Map.empty, 0)
+  in
+    TestStats {
+      tsFoundTestFiles=foundCount,
+      tsLoadedTests=loadedCount,
+      tsSelectedTests=selectedCount,
+      tsPassedTests=count,
+      tsHistogram=computeHistogram results
+    }
+
+-- | Adds length of @report@ @crTestResults@ to @acc@
+countTestsPerCategory :: Int -> String -> CategoryReport -> Int
+countTestsPerCategory acc _ report =
+  acc + length (crTestResults report)
 
 -- ---------------------------------------------------------------------------
 -- Histogram
@@ -100,7 +150,18 @@ computeStats foundCount loadedCount selectedCount mCategoryResults = undefined
 --
 -- FLP: Implement this function.
 computeHistogram :: Map String CategoryReport -> Map String Int
-computeHistogram categories = undefined
+computeHistogram categories =
+  -- Create empty histogram
+  let hist = Map.fromList [ (rateToBin (x / 10), 0 :: Int) | x <- [0..10]]
+  in
+    -- Iterate through each category from @categories@ and add it's resulting score to histogram
+    Map.foldlWithKey' (\acc _ cat -> evalOneCategory acc cat) hist categories
+
+-- | Extends @hist@ with resulting score of @cat@
+evalOneCategory :: Map String Int -> CategoryReport -> Map String Int
+evalOneCategory hist cat =
+  -- Increase appropriate bin by one
+  Map.insertWith (+) (rateToBin (fromIntegral (crPassedPoints cat) / fromIntegral (crTotalPoints cat))) 1 hist
 
 -- | Map a pass rate in @[0, 1]@ to a histogram bin key.
 --

@@ -17,6 +17,8 @@
     - U všech stringových hodnot kromě popisku předpokládám, že prázdná hodnota za uvozujícím tagem je nevalidní.
 - buildExitCodes
     - Vzhledem k tomu, že funkce nevrací žádné chyby, tak předpokládám, že když se objeví TestCaseType ParseOnly, tak header obsahujej parser návratové kódy a tedy vracím Just hodnoty. Obdobně u ExecuteOnly.
+- groupByCategory
+    - Tato funkce mi přišla ze všech zdaleka nejsložitější. Pravděpodobně také kvůli tomu, že jsem v Haskelu nikdy nepracovali s mapami. Výsledek možná vypadá jakž takž elegantně, ale věřte mi, proces fakt elegantní nebyl.
 
 ## Splnění bonusových úloh
 - implementace matchování na základě regexů
@@ -26,3 +28,4 @@
 - regex-tdfa - přidána za účelem splnění úkolu porovnávání vůči regexům
 
 ## Změny mimo funkce
+- Žádné. A pokud ano, tak to bylo omylem. Sem tam jsem provedl etha redukci, ale to by nemělo mít na funkčnost vliv.
