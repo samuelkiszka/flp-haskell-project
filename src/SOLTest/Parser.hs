@@ -14,6 +14,7 @@ module SOLTest.Parser
   )
 where
 
+import Text.Read (readMaybe)
 import Data.Char (isSpace)
 import Data.List (isPrefixOf)
 import SOLTest.Types
@@ -78,7 +79,20 @@ emptyHeader =
 --
 -- FLP: Implement this function.
 splitHeaderBody :: String -> ([String], String)
-splitHeaderBody content = undefined
+splitHeaderBody content =
+  let ls = lines content
+      len = length ls
+      pos = firstEmptyLine 0 ls
+  in
+    if pos == len
+      then (ls, "")
+      else (take pos ls, unlines $ drop (pos + 1) ls)
+
+-- | Helper function to get first position of the empty line. 
+-- Returns len of input list if no empty line exist.
+firstEmptyLine :: Int -> [String] -> Int
+firstEmptyLine pos [] = pos
+firstEmptyLine pos (l:ls) = if null (trim l) then pos else firstEmptyLine (pos + 1) ls
 
 -- ---------------------------------------------------------------------------
 -- Header line parsing
@@ -96,7 +110,36 @@ parseHeaderLine hdr line
   | "*** " `isPrefixOf` line =
       let val = trim (drop 4 line)
        in Right hdr {phDescription = Just val}
-  -- ???
+  | "+++ " `isPrefixOf` line =
+      let val = trim (drop 4 line)
+      in
+        if null val 
+          then Left "Category cannot be an empty string!"
+          else Right hdr {phCategory = Just val}
+  | "--- " `isPrefixOf` line =
+      let val = trim (drop 4 line)
+      in
+       if null val
+        then Left "Tag cannot be an empty string!"
+        else Right hdr {phTags = phTags hdr ++ [val]}
+  | ">>> " `isPrefixOf` line =
+      let val = trim (drop 4 line)
+       in 
+        case readMaybe val of
+          Nothing -> Left "Weight must be a number!"
+          Just num -> Right hdr {phWeight = Just num}
+  | "!C! " `isPrefixOf` line =
+      let val = trim (drop 4 line)
+      in
+        case readMaybe val of
+          Nothing -> Left "Parser code must be a number!"
+          Just num -> Right hdr {phParserCodes = phParserCodes hdr ++ [num]}
+  | "!I! " `isPrefixOf` line =
+      let val = trim (drop 4 line)
+      in
+        case readMaybe val of
+          Nothing -> Left "Interpreter code must be a number!"
+          Just num -> Right hdr {phInterpreterCodes = phInterpreterCodes hdr ++ [num]}
   | otherwise = Right hdr -- unknown or comment line: skip
 
 -- | Parse all header lines into a 'ParsedHeader'.
@@ -190,7 +233,16 @@ parseTestFile tcf content = do
 --
 -- FLP: Implement this function.
 buildExitCodes :: TestCaseType -> ParsedHeader -> (Maybe [Int], Maybe [Int])
-buildExitCodes = undefined
+buildExitCodes tct hdr =
+  let pCodes = phParserCodes hdr
+      iCodes = phInterpreterCodes hdr
+  in
+    case tct of
+      ParseOnly -> (Just pCodes, Nothing)
+      ExecuteOnly -> (Nothing, Just iCodes)
+      Combined -> case pCodes of
+        [] -> (Nothing, Just iCodes)
+        _ -> (Just pCodes, Just iCodes)
 
 -- ---------------------------------------------------------------------------
 -- Utilities

@@ -13,6 +13,10 @@
     - Funkce využívá další dvě pomocné funkce 
         - matchesAnyString - pouhé provolání matchesString pro každou hodnotu vstupního pole
         - matchesString - provádí samotné porovnání regexově nebo čistě porovnáním na základě vstupních parametrů
+- parseHeaderLine
+    - U všech stringových hodnot kromě popisku předpokládám, že prázdná hodnota za uvozujícím tagem je nevalidní.
+- buildExitCodes
+    - Vzhledem k tomu, že funkce nevrací žádné chyby, tak předpokládám, že když se objeví TestCaseType ParseOnly, tak header obsahujej parser návratové kódy a tedy vracím Just hodnoty. Obdobně u ExecuteOnly.
 
 ## Splnění bonusových úloh
 - implementace matchování na základě regexů
