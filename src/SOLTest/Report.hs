@@ -56,10 +56,6 @@ buildReport discovered unexecuted mResults selected foundCount =
 -- one per category.
 --
 -- The @definitions@ list is used to look up each test's category and points.
---
--- FLP: Implement this function. The following functions may (or may not) come in handy:
---      @Map.fromList@, @Map.foldlWithKey'@, @Map.empty@, @Map.lookup@, @Map.insertWith@,
---      @Map.map@, @Map.fromList@
 groupByCategory ::
   [TestCaseDefinition] ->
   Map String TestCaseReport ->
@@ -101,8 +97,6 @@ joinCategoryReports result acc =
 -- ---------------------------------------------------------------------------
 
 -- | Compute the 'TestStats' from available information.
---
--- FLP: Implement this function. You'll use @computeHistogram@ here.
 computeStats ::
   -- | Total @.test@ files found on disk.
   Int ->
@@ -117,7 +111,7 @@ computeStats foundCount loadedCount selectedCount mCategoryResults =
   let (results, count) = case mCategoryResults of
         Just res ->
           -- Sum of each category test count
-          let cnt = Map.foldlWithKey' countTestsPerCategory 0 res
+          let cnt = sum [ countTestsPerCategory cr | cr <- Map.elems res ]
           in (res, cnt)
         Nothing -> (Map.empty, 0)
   in
@@ -129,10 +123,10 @@ computeStats foundCount loadedCount selectedCount mCategoryResults =
       tsHistogram=computeHistogram results
     }
 
--- | Adds length of @report@ @crTestResults@ to @acc@
-countTestsPerCategory :: Int -> String -> CategoryReport -> Int
-countTestsPerCategory acc _ report =
-  acc + length (crTestResults report)
+-- | Count number of Passed test in CategoryReport @cr@
+countTestsPerCategory :: CategoryReport -> Int
+countTestsPerCategory cr =
+  Map.size (Map.filter (\r -> tcrResult r == Passed) (crTestResults cr))
 
 -- ---------------------------------------------------------------------------
 -- Histogram
@@ -147,12 +141,10 @@ countTestsPerCategory acc _ report =
 -- The rate is mapped to a bin key (@\"0.0\"@ through @\"0.9\"@) and the count
 -- of categories in each bin is accumulated. All ten bins are always present in
 -- the result, even if their count is 0.
---
--- FLP: Implement this function.
 computeHistogram :: Map String CategoryReport -> Map String Int
 computeHistogram categories =
   -- Create empty histogram
-  let hist = Map.fromList [ (rateToBin (x / 10), 0 :: Int) | x <- [0..10]]
+  let hist = Map.fromList [ (rateToBin (x / 10), 0 :: Int) | x <- [0..9]]
   in
     -- Iterate through each category from @categories@ and add it's resulting score to histogram
     Map.foldlWithKey' (\acc _ cat -> evalOneCategory acc cat) hist categories
@@ -161,7 +153,12 @@ computeHistogram categories =
 evalOneCategory :: Map String Int -> CategoryReport -> Map String Int
 evalOneCategory hist cat =
   -- Increase appropriate bin by one
-  Map.insertWith (+) (rateToBin (fromIntegral (crPassedPoints cat) / fromIntegral (crTotalPoints cat))) 1 hist
+  let total = Map.size (crTestResults cat)
+      passed = Map.size (Map.filter (\r -> tcrResult r == Passed) (crTestResults cat))
+      ratio = if total == 0
+        then 0
+        else fromIntegral passed / fromIntegral total
+  in Map.insertWith (+) (rateToBin ratio) 1 hist
 
 -- | Map a pass rate in @[0, 1]@ to a histogram bin key.
 --

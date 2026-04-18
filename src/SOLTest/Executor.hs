@@ -98,15 +98,13 @@ executeExecuteOnly interpPath test =
         }
 
 -- | Execute a 'Combined' test case.
---
--- FLP: Implement this function. You'll use @withTempSource@ here.
 executeCombined :: FilePath -> FilePath -> TestCaseDefinition -> IO TestCaseReport
 executeCombined parserPath interpPath test = do
   parsRes <- executeParseOnly parserPath test
   -- based on parser result, interpreter is either run or not
   case tcrParserExitCode parsRes of
     Just 0 ->
-      withTempSource (fromMaybe "" (tcrParserStdout parsRes)) $ \tmpPath -> do -- TODO zkontrolovat, zda fromMaybe může být tady
+      withTempSource (fromMaybe "" (tcrParserStdout parsRes)) $ \tmpPath -> do
         (exitCode, iOut, iErr) <- runInterpreter interpPath tmpPath (tcdStdinFile test)
         let code = exitCodeToInt exitCode
             expectedCodes = fromMaybe [] (tcdExpectedInterpreterExitCodes test)
@@ -171,8 +169,6 @@ runDiff actualFile expectedFile = do
 --
 -- Runs diff only when the interpreter exited with code 0 AND a @.out@ file
 -- is present.
---
--- FLP: Implement this function.
 checkInterpreterResult ::
   -- | Actual interpreter exit code.
   Int ->
@@ -218,8 +214,6 @@ withTempSource content action =
 
 -- | Write the interpreter stdout to a temp file and diff it against @.out@.
 -- The file is deleted when the action returns.
---
--- FLP: Implement this function. It will start similarly to @withTempSource@.
 runDiffOnOutput :: String -> FilePath -> IO (TestResult, Maybe String)
 runDiffOnOutput iOut outFile = 
   withTempSource iOut $ \tmpFile -> do
@@ -254,9 +248,6 @@ withExecutable (Just path) action = do
 -- | Check that a file exists and has its executable bit set.
 -- The IO action returns 'Nothing' if the file is usable, or 'Just'
 -- an 'UnexecutedReason' describing the problem.
---
--- FLP: Implement this function. The following functions may come in handy:
---      @doesFileExist@, @getPermissions@, @executable@
 checkExecutable :: FilePath -> IO (Maybe UnexecutedReason)
 checkExecutable path = do
   result <- try (doesFileExist path) :: IO (Either IOException Bool)

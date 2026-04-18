@@ -1,5 +1,8 @@
 ## Adresa github repozitáře
-- git@github.com:samuelkiszka/flp-haskell-project.git
+- pro clone
+    - git@github.com:samuelkiszka/flp-haskell-project.git
+- GitHub
+    - https://github.com/samuelkiszka/flp-haskell-project/tree/master
 
 ## Zajímavé části řešení
 - checkInterpreterResult
@@ -19,13 +22,15 @@
     - Vzhledem k tomu, že funkce nevrací žádné chyby, tak předpokládám, že když se objeví TestCaseType ParseOnly, tak header obsahujej parser návratové kódy a tedy vracím Just hodnoty. Obdobně u ExecuteOnly.
 - groupByCategory
     - Tato funkce mi přišla ze všech zdaleka nejsložitější. Pravděpodobně také kvůli tomu, že jsem v Haskelu nikdy nepracovali s mapami. Výsledek možná vypadá jakž takž elegantně, ale věřte mi, proces fakt elegantní nebyl.
+- computeHistogram
+    - Nebylo plně specifikováno, co dělat, když se vyskytne kategorie, která je hodnocema maximálně 0 body. Až testy mi napověděly, že se očekává, že takováto kategorie půjde do binu "0.0". A až další test mi poté prozradil, že nemám počítat body ale počty testů :) Vím, je to v dokumentaci. Ale povedlo se mi to přehlédnout.
 
 ## Splnění bonusových úloh
-- implementace matchování na základě regexů
+- implementace filtrování na základě regexů
     - Tento úkol vyžadoval pouze malé rozšíření původního kódu. Vyžadoval však zjištění způsobu přidání knihovny do projektu.
 
 ## Přidání dalších knihoven
 - regex-tdfa - přidána za účelem splnění úkolu porovnávání vůči regexům
 
 ## Změny mimo funkce
-- Žádné. A pokud ano, tak to bylo omylem. Sem tam jsem provedl etha redukci, ale to by nemělo mít na funkčnost vliv.
+- Pouze změny týkající se implementace regexů.

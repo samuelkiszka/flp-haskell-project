@@ -32,8 +32,6 @@ import Text.Regex.TDFA ((=~))
 -- * @filteredOut@ are the tests that were removed by filtering.
 --
 -- The union of @selected@ and @filteredOut@ always equals the input list.
---
--- FLP: Implement this function using @matchesAny@ and @matchesCriterion@.
 filterTests ::
   FilterSpec ->
   [TestCaseDefinition] ->
@@ -43,21 +41,18 @@ filterTests spec tests =
   let fsIncl = fsIncludes spec
       fsExcl = fsExcludes spec
       useRegex = fsUseRegex spec
-      -- Apply include filters if any are specified;
-      -- otherwise keep all tests
-      included =
-        if null fsIncl 
-          then tests
-          else filter (matchesAny useRegex fsIncl) tests
+      -- Split tests into included and remaining
+      -- based on include filters
+      (included, remaining) =
+        if null fsIncl
+          then (tests, [])
+          else partition (matchesAny useRegex fsIncl) tests
 
       -- Split included tests into selected and filtered-out
       -- based on exclude filters
-      (selected, filteredOut) =
-        if null fsIncl 
-          then (included, [])
-          else partition (not . matchesAny useRegex fsExcl) included
+      (selected, filteredOut) = partition (not . matchesAny useRegex fsExcl) included
   in
-    (selected, filteredOut)
+    (selected, filteredOut ++ remaining)
 
 -- | Check whether a test matches at least one criterion in the list.
 matchesAny :: Bool -> [FilterCriterion] -> TestCaseDefinition -> Bool
@@ -69,10 +64,6 @@ matchesAny useRegex criteria test =
 -- When @useRegex@ is 'False', matching is case-sensitive string equality.
 -- When @useRegex@ is 'True', the criterion value is treated as a POSIX
 -- regular expression matched against the relevant field(s).
---
--- FLP: Implement this function. If you're not implementing the regex matching
--- bonus extension, you can either remove the first argument and update the usages,
--- or you can simply ignore the value.
 matchesCriterion :: Bool -> TestCaseDefinition -> FilterCriterion -> Bool
 matchesCriterion useRegex test criterion =
   -- Extract name, category and tags from the test
@@ -95,12 +86,11 @@ matchesAnyString useRegex pattern = any (matchesSingleString useRegex pattern)
 matchesSingleString :: Bool -> String -> String -> Bool
 matchesSingleString useRegex pattern opt =
   let trimOpt = trimFilterId opt
-      trimMatch = trimFilterId pattern
   in
     -- Choose matching strategy based on @useRegex@
-    if useRegex 
-      then trimOpt =~ trimMatch 
-      else trimOpt == trimMatch
+    if useRegex
+      then trimOpt =~ pattern 
+      else trimOpt == pattern
 
 -- | Trim leading and trailing whitespace from a filter identifier.
 trimFilterId :: String -> String

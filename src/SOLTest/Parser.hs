@@ -76,8 +76,6 @@ emptyHeader =
 --
 -- If there is no empty line, all lines are treated as header lines and the
 -- body is empty.
---
--- FLP: Implement this function.
 splitHeaderBody :: String -> ([String], String)
 splitHeaderBody content =
   let ls = lines content
@@ -103,8 +101,6 @@ firstEmptyLine pos (l:ls) = if null (trim l) then pos else firstEmptyLine (pos +
 -- Returns 'Left' with an error message if the line has a known prefix but
 -- a malformed value (e.g. a non-integer weight). Lines with unrecognised
 -- prefixes are silently ignored, as the spec does not prohibit extra lines.
---
--- FLP: Implement the rules for all accepted headers.
 parseHeaderLine :: ParsedHeader -> String -> Either String ParsedHeader
 parseHeaderLine hdr line
   | "*** " `isPrefixOf` line =
@@ -230,8 +226,6 @@ parseTestFile tcf content = do
 -- For 'Combined' tests: if no @!C!@ codes were given, 'tcdExpectedParserExitCodes'
 -- is 'Nothing' (the parser must exit 0, which is implicit and not stored in the
 -- list); if @!C! 0@ was explicit, it is stored as @Just [0]@.
---
--- FLP: Implement this function.
 buildExitCodes :: TestCaseType -> ParsedHeader -> (Maybe [Int], Maybe [Int])
 buildExitCodes tct hdr =
   let pCodes = phParserCodes hdr

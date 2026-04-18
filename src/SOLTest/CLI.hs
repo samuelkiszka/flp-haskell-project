@@ -148,15 +148,18 @@ filterSpecParser =
               <> help "Exclude tests with tag ID"
           )
       )
+    <*> switch
+      ( long "regex"
+          <> short 'g'
+          <> help "Take ID parameters of filters as a regex"
+      )
 
 -- | Assemble raw filter string lists into a 'FilterSpec'.
 --
--- FLP: Implement this function (read the long comment above first).
-
-buildFilterSpec :: [String] -> [String] -> [String] -> [String] -> [String] -> [String] -> FilterSpec
-buildFilterSpec inclAny exclAny inclCat inclTag exclCat exclTag =
+buildFilterSpec :: [String] -> [String] -> [String] -> [String] -> [String] -> [String] -> Bool -> FilterSpec
+buildFilterSpec inclAny exclAny inclCat inclTag exclCat exclTag useRegex =
   FilterSpec {
     fsIncludes = map ByAny inclAny ++ map ByCategory inclCat ++ map ByTag inclTag,
     fsExcludes = map ByAny exclAny ++ map ByCategory exclCat ++ map ByTag exclTag,
-    fsUseRegex = False
+    fsUseRegex = useRegex
   }
